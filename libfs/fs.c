@@ -31,9 +31,11 @@ typedef struct __attribute__((__packed__)) Root_Dir{
 	char padding[10];
 }
 int FS_Mount=0;
-typedef struct sBlock * SB;
-typedef struct Root_Dir * RD;
-typedef struct FAT * fat;
+int * dir; //keeps track of which index in the directory is being used
+struct sBlock * SB;
+struct Root_Dir * RD;
+struct FAT * fat;
+
 /* TODO: Phase 1 */
 
 int fs_mount(const char *diskname)
@@ -60,9 +62,9 @@ int fs_mount(const char *diskname)
 		free(RD);
 		return -1;
 	}
-	fat->f_table =  malloc(SB->nDataBlocks *sizeof(FAT));
+	fat->f_table =  calloc(SB->nDataBlocks *sizeof(FAT));//initialize all indices to 0
 	fat->f_table[0]= FAT_EOC;
-	
+	dir =  calloc(sizeof(int));
 	FS_Mount=1;
 	return 0;
 	
@@ -98,6 +100,8 @@ int fs_info(void)
 
 int fs_create(const char *filename)
 {
+	
+	
 	/* TODO: Phase 2 */
 }
 
