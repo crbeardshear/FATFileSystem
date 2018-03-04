@@ -7,6 +7,8 @@
 #include "fs.h"
 
 #define FAT_EOC 0xFFFF
+#define ceilingdiv(x,y) \
+	1 + ((x - 1) / y)
 //phase 1-2 function prototypes
 int bytes_to_block(int y);
 int delete_file(int fir_block);
@@ -312,7 +314,8 @@ int fs_lseek(int fd, size_t offset)
 
 int fs_write(int fd, void *buf, size_t count)
 {
-	/* TODO: Phase 4 */
+	//WIP
+	
 }
 
 //using generic variables like rootdir. Will refactor when other phases are finalized
