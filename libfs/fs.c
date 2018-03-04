@@ -315,9 +315,81 @@ int fs_write(int fd, void *buf, size_t count)
 	/* TODO: Phase 4 */
 }
 
+//using generic variables like rootdir. Will refactor when other phases are finalized
+//ceilingdiv(a,b) is a symbolic function, defined at the top
+//it is simply CEILING(a/b), with integers a and b
+//May bug out on testing due to mixing 0-indexed values and 1-indexed values
 int fs_read(int fd, void *buf, size_t count)
 {
-	/* TODO: Phase 4 */
+	//fd is not currently open
+	if (filedes[fd] == NULL)
+		return -1;
+
+	//fd is out of bounds
+	if (fd > FS_OPEN_MAX_COUNT)
+		return -1;
+
+	//used for first and last block
+	void *bounce_buf = malloc(BLOCK_SIZE);
+
+	//index in *buf which is currently being copied to
+	int buf_index = 0;
+	int end_index = 0;
+	int bytes_remaining = count;
+	int file_offset = filedes[fd].offset;
+	int block_offset = file_offset % BLOCK_SIZE;
+
+	int filesize = rootdir[filedes[fd].rdindex].fSize;
+
+	//which index of block from FAT to read from: ceiling(offset/BLOCK_SIZE)
+	int target_blocknum = ceilingdiv(file_offset, BLOCK_SIZE);
+
+	//the first block in the chain
+	uint16_t curblock = rootdir[filedes[fd].rdindex].index;
+
+	//Cycles through the fat and finds the index target_blocknum in fd
+	for (int i = 0; i < target_blocknum; i++)
+		curblock = fat[curblock];
+
+	//first block to read from
+	uint16_t firstblock = curblock;
+
+	do {
+		if (curblock == firstblock) {
+			start_offset = block_offset;
+		} else {
+			start_offset = 0;
+		}
+
+		//if curblock is the last of the chain
+		if (fat[curblock] == FAT_EOC) {
+			if (file_offset + count > filesize) {
+				//Read to end of file
+				end_offset = filesize % BLOCK_SIZE;
+			} else {
+				end_offset = count - buf_index;
+			}
+		} else {
+			end_offset = BLOCK_SIZE;
+		}
+
+		read_amt = end_offset - start_offset;
+
+		memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
+
+		bytes_remaining -= read_amt;
+		buf_index += read_amt;
+
+		curblock = fat[curblock];
+
+	} while (curblock != FAT_EOC && bytes_remaining > 0);
+
+	//need to use buf_index because count could exceed the size of the file
+	filedes[fd].offset = filedes[fd].offset + buf_index;
+
+	free(bounce_buf);
+
+	return buf_index;
 }
 
 
