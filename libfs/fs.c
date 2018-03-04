@@ -312,10 +312,81 @@ int fs_lseek(int fd, size_t offset)
 	/* TODO: Phase 3 */
 }
 
+//WIP, not final
 int fs_write(int fd, void *buf, size_t count)
 {
-	//WIP
-	
+	if (fd > FS_OPEN_MAX_COUNT)
+		return -1;
+
+	if (filedes[fd] == NULL)
+		return -1;
+
+	void *bounce_buf = malloc(BLOCK_SIZE);
+	int buf_index = 0;
+	int bytes_remaining = count;
+	int file_offset = filedes[fd].offset;
+	int block_offset = file_offset % BLOCK_SIZE;
+	int write_amt = 0;
+	unsigned int end_offset = 0;
+	unsigned int start_offset = 0;
+
+	int filesize = rootdir[filedes[fd].rdindex].fSize;
+
+	int target_blocknum = ceilingdiv(filedes[fd].offset, BLOCK_SIZE);
+	//current = the first index of the file pointed at by fd
+	uint16_t curblock = rootdir[filedes[fd].rdindex].index;
+
+	//Cycles through the fat and finds the index target_block in file des fd
+	for (int i = 0; i < target_blocknum; i++)
+		curblock = fat[curblock];
+
+	//First Block
+	uint16_t firstblock = curblock;
+
+	do {
+		if (curblock == firstblock) {
+			start_offset = block_offset;
+		} else {
+			start_offset = 0;
+			//copy over read_amt bytes to bounce_buf
+		}
+
+		//if it is the first or last block to write, preserve
+		//the data outside of the write
+		if (curblock == firstblock || bytes_remaining < BLOCK_SIZE) {
+			if (block_read(curblock, bounce_buf))
+				return -1;
+		}
+
+		//if curblock is the last of the chain
+		if (fat[curblock] == FAT_EOC || bytes_remaining < BLOCK_SIZE) {
+			if (file_offset + count > filesize) {
+				//Resize the file
+				disk_extend(fd, ext_blocks);
+				end_offset = filesize % BLOCK_SIZE;
+			} else {
+				end_offset = count - buf_index;
+			}
+		} else {
+			end_offset = BLOCK_SIZE;
+		}
+
+		write_amt = end_offset - start_offset;
+
+		memcpy(buf + buf_index, bounce_buf + start_offset, write_amt);
+
+		bytes_remaining -= write_amt;
+		buf_index += write_amt;
+
+		curblock = fat[curblock];
+
+	} while (bytes_remaining > 0);
+
+	filedes[fd].offset = filedes[fd].offset + buf_index;
+
+	free(bounce_buf);
+
+	return buf_index;
 }
 
 //using generic variables like rootdir. Will refactor when other phases are finalized
@@ -324,23 +395,26 @@ int fs_write(int fd, void *buf, size_t count)
 //May bug out on testing due to mixing 0-indexed values and 1-indexed values
 int fs_read(int fd, void *buf, size_t count)
 {
-	//fd is not currently open
-	if (filedes[fd] == NULL)
-		return -1;
-
 	//fd is out of bounds
 	if (fd > FS_OPEN_MAX_COUNT)
+		return -1;
+
+	//fd is not currently open
+	if (filedes[fd] == NULL)
 		return -1;
 
 	//used for first and last block
 	void *bounce_buf = malloc(BLOCK_SIZE);
 
 	//index in *buf which is currently being copied to
+	int read_amt = 0;
 	int buf_index = 0;
-	int end_index = 0;
 	int bytes_remaining = count;
 	int file_offset = filedes[fd].offset;
 	int block_offset = file_offset % BLOCK_SIZE;
+	unsigned int start_offset = 0;
+	unsigned int end_offset = 0;
+	
 
 	int filesize = rootdir[filedes[fd].rdindex].fSize;
 
@@ -365,7 +439,7 @@ int fs_read(int fd, void *buf, size_t count)
 		}
 
 		//if curblock is the last of the chain
-		if (fat[curblock] == FAT_EOC) {
+		if (fat[curblock] == FAT_EOC || bytes_remaining < BLOCK_SIZE) {
 			if (file_offset + count > filesize) {
 				//Read to end of file
 				end_offset = filesize % BLOCK_SIZE;
