@@ -133,27 +133,27 @@ int fs_mount(const char *diskname)
 	//make sure first FAT block is 
 	if(fat->f_table[0]!=FAT_EOC){
 		free(SB);
-	    free(RD);
-	    free(fat->f_table);
-	    free(fat);
-	    free(filedes);
+		free(RD);
+		free(fat->f_table);
+		free(fat);
+		free(filedes);
 		return -1;
 	}
-        int numUsedFB=0;
-        for(int i=0; i<SB->nDataBlocks;i++){
-           //if data is stored in the fat table, then it is likely root dir
-           //does not contain garbage and sould be read
-           if(fat->f_table[i]!=0){
-            numUsedFB++;
-           }
-           if(numUsedFB>1){
-           if(read_in_RD()!=0){
-		      fprintf(stderr,"READ RD FAIL\n");
-		      return -1;
-	       }
-		      break;
-       }
-       }
+		int numUsedFB=0;
+		for(int i=0; i<SB->nDataBlocks;i++){
+		   //if data is stored in the fat table, then it is likely root dir
+		   //does not contain garbage and sould be read
+		   if(fat->f_table[i]!=0){
+			numUsedFB++;
+		   }
+		   if(numUsedFB>1){
+		   if(read_in_RD()!=0){
+			  fprintf(stderr,"READ RD FAIL\n");
+			  return -1;
+		   }
+			  break;
+	   }
+	   }
 	
 	FS_Mount=1;
 	
@@ -229,7 +229,7 @@ int fs_create(const char *filename)
 	//check if ptr is valid
 	if (filename == NULL)
 		return -1;
-    if (filename[0] == '\0')
+	if (filename[0] == '\0')
 		return -1;
 	//check if filename is valid
 	int i = 0;
@@ -258,22 +258,27 @@ int fs_delete(const char *filename)
 		return -1;
 	}
 
-	int i=0; 
-	//check to see if filename is open in any file descriptors
-	for(int i=0; i<FS_OPEN_MAX_COUNT;i++){
-		if(strcmp(filedes[i].fd_filename,filename)==0){
-		    return -1;
-	    }
-	}
+	//validate filename
+	int i=0;
+	char null[1] = {'\0'};
+
 	if(file_exist(filename)!=0||(strncmp(filename,null,1)==0)){
 		return -1;
 	}
+
+	//check to see if filename is open in any file descriptors
+	for(int i=0; i<FS_OPEN_MAX_COUNT;i++){
+		if(strcmp(filedes[i].fd_filename,filename)==0){
+			return -1;
+		}
+	}
+	
 	while(i<FS_FILE_MAX_COUNT){
 		if((strcmp(RD[i].fname,filename)==0)){
 			delete_file(RD[i].f_index);
 			delete_root(filename);
-	        RD[i].fSize=0;
-	        RD[i].f_index=FAT_EOC;
+			RD[i].fSize=0;
+			RD[i].f_index=FAT_EOC;
 			break;
 		}
 		i++;
@@ -284,21 +289,21 @@ int fs_delete(const char *filename)
 
 int fs_ls(void)
 {   //ensure that mount has been sucessfully called
-    if(FS_Mount==0){
+	if(FS_Mount==0){
 		return -1;
 	}
 	
 	int num_files=0;
 	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-        if(RD[i].fname[0]!='\0'){
+		if(RD[i].fname[0]!='\0'){
 			num_files++;
 			if(num_files==1){
-			   fprintf(stdout,"FS Ls:\n");
+				fprintf(stdout,"FS Ls:\n");
 			}
-            fprintf(stdout,"file: %s, size: %d, data_blk: %d\n",RD[i].fname,RD[i].fSize,RD[i].f_index);
-        }
+			fprintf(stdout,"file: %s, size: %d, data_blk: %d\n",RD[i].fname,RD[i].fSize,RD[i].f_index);
+		}
 	
-    }
+	}
 	return 0;
 	/* TODO: Phase 2 */
 }
@@ -335,7 +340,7 @@ int fs_open(const char *filename)
 	//at this point, j == the open filedes spot
 	//initialize the file descriptor
 	fs_fd_init(j, filename);
-    fd_total++;
+	fd_total++;
 	return j;
 	/* TODO: Phase 3 */
 }
@@ -368,10 +373,10 @@ int fs_stat(int fd)
 	if(FS_OPEN_MAX_COUNT<=fd||fd<0){
 		return -1;
 	}
-    if((fd_exists(fd))){
-       return -1;
-    }
-    else{
+	if((fd_exists(fd))){
+	   return -1;
+	}
+	else{
 		for(int i=0; i<FS_FILE_MAX_COUNT;i++){
 			//make sure file still exists
 			if(strcmp(RD[i].fname,filedes[fd].fd_filename)==0){
@@ -379,8 +384,8 @@ int fs_stat(int fd)
 			}
 			
 		}
-       
-    }	
+	   
+	}	
 	//fd does not exist
 	return -1;
 	/* TODO: Phase 3 */
@@ -654,11 +659,11 @@ int update_FAT(){
 //old size is in bytes
 char * resize_buffer(char * buffer, int old_size, int * new_size){
 	char * new_buffer;
-    if((old_size%BLOCK_SIZE)==0){
+	if((old_size%BLOCK_SIZE)==0){
 		new_buffer = calloc(old_size, sizeof(char));
 		for(int i=0; i < old_size; i++){
-         new_buffer[i]=buffer[i];
-        }
+		 new_buffer[i]=buffer[i];
+		}
 		*new_size=old_size;
 		return new_buffer;
 	}
@@ -669,105 +674,105 @@ char * resize_buffer(char * buffer, int old_size, int * new_size){
 		blocks=blocks+1;
 		int num_bytes = blocks*BLOCK_SIZE;
 		*new_size=num_bytes;
-        new_buffer = calloc(num_bytes, sizeof(char));
+		new_buffer = calloc(num_bytes, sizeof(char));
 		for(int i=0; i<num_bytes; i++){
-         new_buffer[i]=buffer[i];
-        }
+		 new_buffer[i]=buffer[i];
+		}
 		
 	
 	}   
-	    return new_buffer;
-    /* TODO: Phase 1-2 */
+		return new_buffer;
+	/* TODO: Phase 1-2 */
 }
 
 
 int delete_root(const char * fname){
-    
-    for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-        if(strcmp(RD[i].fname,fname)==0){
-            RD[i].fname[0]='\0';
-          return 0;
-        }
-    }
-    return -1;
+	
+	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
+		if(strcmp(RD[i].fname,fname)==0){
+			RD[i].fname[0]='\0';
+		  return 0;
+		}
+	}
+	return -1;
 }
 
 int file_exist(const char * fname){
-    
-    for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-        if((strcmp(RD[i].fname,fname)==0)){
-          return 0;
-        }
-    }
-    return -1;
+	
+	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
+		if((strcmp(RD[i].fname,fname)==0)){
+		  return 0;
+		}
+	}
+	return -1;
 }
 
 int delete_file(int fir_block){
-    int temp =0; 
+	int temp =0; 
 	
-    
-    for(int i=0; i<SB->nDataBlocks; i++){
-        if(fat->f_table[fir_block]==FAT_EOC){
-            fat->f_table[fir_block]=0;
-            return 0;
-        }
-        temp = fat->f_table[fir_block];
-        fat->f_table[fir_block]=0;
-	    //zero out corresponding data block, cannot ignore data in
-        //data blocks, it may accidentally be read in later on fs_read,
-        //might not be necesary, because whole block is overwritten
-        //block_write(SB.f_block_start+fir_block,null);
-	    //zeroing out corresponding Fat block index may not becasue
-	    //necesary because will not be reading from fat table blocks
-	    //and will totally overwrite totally these blocks when writing
-	    //to fat table
-	    //Will need to update FAT blocks and Root directory blocks at end
-    
-        fir_block = temp;
-    }
-    //EOC wasn't found
-    return -1;
+	
+	for(int i=0; i<SB->nDataBlocks; i++){
+		if(fat->f_table[fir_block]==FAT_EOC){
+			fat->f_table[fir_block]=0;
+			return 0;
+		}
+		temp = fat->f_table[fir_block];
+		fat->f_table[fir_block]=0;
+		//zero out corresponding data block, cannot ignore data in
+		//data blocks, it may accidentally be read in later on fs_read,
+		//might not be necesary, because whole block is overwritten
+		//block_write(SB.f_block_start+fir_block,null);
+		//zeroing out corresponding Fat block index may not becasue
+		//necesary because will not be reading from fat table blocks
+		//and will totally overwrite totally these blocks when writing
+		//to fat table
+		//Will need to update FAT blocks and Root directory blocks at end
+	
+		fir_block = temp;
+	}
+	//EOC wasn't found
+	return -1;
 }
 
 struct Root_Dir * create_root(const char *file_n){
-    
-    for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-          if(RD[i].fname[0]=='\0'){
+	
+	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
+		  if(RD[i].fname[0]=='\0'){
 			strcpy(RD[i].fname, file_n);
-          return RD+i;
-          }
-    }
-    return NULL;
+		  return RD+i;
+		  }
+	}
+	return NULL;
 }
 int next_block(){
-    
-    for(int i =0; i<SB->nDataBlocks; i++){
-        if(fat->f_table[i]==0){
-            return i;
-        }
-    }
-    //FAT table is full
-    return -1;
+	
+	for(int i =0; i<SB->nDataBlocks; i++){
+		if(fat->f_table[i]==0){
+			return i;
+		}
+	}
+	//FAT table is full
+	return -1;
 }
 
 int free_FAT_blocks(){
 	
 	int fb_count=0;
-    for(int i =0;i<SB->nDataBlocks;i++){
-        if(fat->f_table[i]==0){
-            fb_count++;
-        }
-    }
+	for(int i =0;i<SB->nDataBlocks;i++){
+		if(fat->f_table[i]==0){
+			fb_count++;
+		}
+	}
 	return fb_count;
 }
 int free_RD_blocks(){
 	int rdb_count=0;
 	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-        if(RD[i].fname[0]=='\0'){
-          rdb_count++;
-        }
-    }
-    return rdb_count;
+		if(RD[i].fname[0]=='\0'){
+		  rdb_count++;
+		}
+	}
+	return rdb_count;
 }
 
 //phase 3 helper functions
@@ -781,14 +786,14 @@ static int fs_fd_init(int fd, const char *filename)
 }
 
 int return_rd(char * fd_name){
-    
-    for(int i=0; i<FS_FILE_MAX_COUNT; i++){
+	
+	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
 		//compare input string to filenames in root directory
-        if((strcmp(RD[i].fname,fd_name)==0)){
-          return i;
-        }
-    }
-    return -1;
+		if((strcmp(RD[i].fname,fd_name)==0)){
+		  return i;
+		}
+	}
+	return -1;
 	/* TODO: Phase 3 */
 }
 
@@ -805,11 +810,11 @@ int file_exists(const char * fd_name)
 {
 	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
 		//compare input string to filenames in root directory
-        if((strcmp(RD[i].fname,fd_name)==0)){
-          return 0;
-        }
-    }
-    return -1;
+		if((strcmp(RD[i].fname,fd_name)==0)){
+		  return 0;
+		}
+	}
+	return -1;
 	
 	/* TODO: Phase 3 */
 }
