@@ -237,6 +237,9 @@ int fs_info(void)
 
 int fs_create(const char *filename)
 {
+	if(FS_Mount==0){
+		return -1;
+	}
 	//check if ptr is valid
 	if (filename == NULL)
 		return -1;
@@ -266,6 +269,9 @@ int fs_create(const char *filename)
 
 int fs_delete(const char *filename)
 {
+	if(FS_Mount==0){
+		return -1;
+	}
 	int i=0; char null[1]={'\0'};
 	//check to see if filename is open in any file descriptors
 	for(int i=0; i<FS_OPEN_MAX_COUNT;i++){
@@ -318,7 +324,9 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
-	
+	if(FS_Mount==0){
+		return -1;
+	}
 	//check if ptr is valid
 	if (filename == NULL)
 		return -1;
@@ -356,6 +364,9 @@ int fs_open(const char *filename)
 
 int fs_close(int fd)
 {
+	if(FS_Mount==0){
+		return -1;
+	}
 	if(FS_OPEN_MAX_COUNT<=fd||fd<0){
 		return -1;
 	}
@@ -372,7 +383,9 @@ int fs_close(int fd)
 
 int fs_stat(int fd)
 {
-	
+	if(FS_Mount==0){
+		return -1;
+	}
 	if(FS_OPEN_MAX_COUNT<=fd||fd<0){
 		return -1;
 	}
@@ -396,6 +409,9 @@ int fs_stat(int fd)
 
 int fs_lseek(int fd, size_t offset)
 {
+	if(FS_Mount==0){
+		return -1;
+	}
 	if(fd_exists(fd)){
 		return -1;
 	} 
