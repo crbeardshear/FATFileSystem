@@ -192,6 +192,7 @@ int fs_umount(void)
 
 int fs_info(void)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
 		return -1;
 	}
@@ -257,7 +258,7 @@ int fs_delete(const char *filename)
 		return -1;
 	}
 
-	int i=0; char null[1]={'\0'};
+	int i=0; 
 	//check to see if filename is open in any file descriptors
 	for(int i=0; i<FS_OPEN_MAX_COUNT;i++){
 		if(strcmp(filedes[i].fd_filename,filename)==0){
@@ -271,7 +272,6 @@ int fs_delete(const char *filename)
 		if((strcmp(RD[i].fname,filename)==0)){
 			delete_file(RD[i].f_index);
 			delete_root(filename);
-			strcpy(RD[i].fname, null);
 	        RD[i].fSize=0;
 	        RD[i].f_index=FAT_EOC;
 			break;
