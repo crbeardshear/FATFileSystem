@@ -45,7 +45,7 @@ typedef struct __attribute__((__packed__)) sBlock{
 
 typedef struct __attribute__((__packed__)) FAT{
 	
-	uint16_t *f_table;//will dynamically allocate, = nDataBlocks
+	uint16_t *f_table;
 }t2;
 typedef struct __attribute__((__packed__)) Root_Dir{
 	
@@ -58,15 +58,13 @@ typedef struct fs_filedes {
 
 	int fd_offset;
 	char fd_filename[FS_FILENAME_LEN];
-   // int length; //used to keep track of how far we've gone into file (in bytes); depth is basically file size in bytes
-	//may need more later
+   
 
 }t4;
 int rd_total=0;//need to keep track of creates and deletes later on
 int fd_total=0;
 struct fs_filedes *filedes;
 int FS_Mount=0;
-//int * dir; //keeps track of which index in the directory is being used
 struct sBlock * SB;
 struct Root_Dir * RD;
 struct FAT * fat;
@@ -75,10 +73,8 @@ struct FAT * fat;
 
 int fs_mount(const char *diskname)
 {
-	//int  retVal;, cmp;
+	
 	char signature[8] = {'E','C','S','1','5','0','F','S'};
-	//const char *  = malloc(8*sizeof(char));
-	//strcpy(signature,temp);
 	SB = (struct sBlock*) calloc(1,sizeof(struct sBlock));
 	RD = (struct Root_Dir*) calloc(FS_FILE_MAX_COUNT, sizeof(struct Root_Dir));//using calloc to initialize pointers
 	fat= (struct FAT*) calloc(1,sizeof(struct FAT));
@@ -86,63 +82,56 @@ int fs_mount(const char *diskname)
 	if(diskname[0]=='\0'){
 		return -1;
 	}
-	//fprintf(stderr,"1......");
+	
 	//open disk
 	if(block_disk_open(diskname)!=0){
-		fprintf(stderr,"block_disk_open FAIL\n");
 		free(SB);
 		free(RD);
 		return -1;
 	}
-	//fprintf(stderr,"2........");
+	
 	//read in superblock
 	if(block_read(0, (void*)SB)!=0){
-		fprintf(stderr,"block_read(0, (void*)SB FAIL\n");
 		free(SB);
 		free(RD);
 		return -1;
 	}
 	SB = (struct sBlock*)SB;
-	//fprintf(stderr,"3........SB->f_block_start%d ", SB->f_block_start);
 	//used strncmp instead strcmp becasue signature 
 	//is not NULL terminated
 	if(strncmp(signature, SB->Sig,8)!=0){
-		fprintf(stderr,"strncmp(signature, SB->Sig,8) FAIL\n");
 		free(SB);
 		free(RD);
 		return -1;
 	}
-	//fprintf(stderr,"3........SB->tNumBlocks: %d",SB->tNumBlocks);
+	
 	if(block_disk_count()!=SB->tNumBlocks){
-		fprintf(stderr,"block_disk_count()!=SB->tNumBlocks FAIL\n");
 		free(SB);
 		free(RD);
 		return -1;
 	}
-	//char null[1]={'\0'};
+	
 	//initialize empty entries
 	for(int i =0; i<FS_FILE_MAX_COUNT; i++){
-		RD[i].fname[0]='\0';//null
-		//strcpy(RD[i].fname,null);
+		RD[i].fname[0]='\0';
+		
 	}
-	//fprintf(stderr,"4........");
+	
 	//create file decriptor table
-	filedes = calloc(FS_OPEN_MAX_COUNT, sizeof(struct fs_filedes));//using calloc o initialize pointers
+	filedes = calloc(FS_OPEN_MAX_COUNT, sizeof(struct fs_filedes));
 	//initialize name of each file decriptor name to '\0'
 	for(int i =0; i<FS_OPEN_MAX_COUNT; i++){
 		filedes[i].fd_filename[0] = '\0';
-		//strcpy(filedes[i].fd_filename,null);
+		
 	}
+	//initialize FAT table and all indices to 0
+	fat->f_table =  calloc(SB->nDataBlocks, sizeof(struct FAT));
 	
-	fat->f_table =  calloc(SB->nDataBlocks, sizeof(struct FAT));//initialize all indices to 0
-	//fprintf(stderr,"6........SB->nDataBlocks: %d",SB->nDataBlocks);
 	if(read_in_FAT()!=0){
-		fprintf(stderr,"READ FAT FAIL\n");
 		return -1;
 	}
 	//make sure first FAT block is 
 	if(fat->f_table[0]!=FAT_EOC){
-		fprintf(stderr,"FAT BLOCK 0 NOT FAT_EOC: FAIL\n");
 		free(SB);
 	    free(RD);
 	    free(fat->f_table);
@@ -158,7 +147,6 @@ int fs_mount(const char *diskname)
             numUsedFB++;
            }
            if(numUsedFB>1){
-			   //fprintf(stderr,"used FAT blocks %d\n",next_block());
            if(read_in_RD()!=0){
 		      fprintf(stderr,"READ RD FAIL\n");
 		      return -1;
@@ -166,10 +154,9 @@ int fs_mount(const char *diskname)
 		      break;
        }
        }
-	//fat->f_table[0]= FAT_EOC; First index of FAT should alread have FAT_EOC
-	//dir =  calloc(FS_FILE_MAX_COUNT, sizeof(int));
+	
 	FS_Mount=1;
-	//fprintf(stderr,"5........");
+	
 	return 0;
 	
 	/* TODO: Phase 1 */
@@ -181,24 +168,19 @@ int fs_umount(void)
 	//check if a virtual disk is open
 	//Check if there are open file descriptors
 	if(FS_Mount==0||fd_total>0){
-		fprintf(stderr,"FS_Mount==0||fd_total>0\n");
 		return -1;
 	}
 	if(update_RD()){
-		fprintf(stderr,"Update RD FAIL\n");
 		return -1;
 	}
 	if(update_FAT()){
-		fprintf(stderr,"Update FAT FAIL\n");
 		return -1;
 	}
-	//do this before calling block_disk_close(), just in case
-	//it returns -1
+	//must do close disk before calling block_disk_close(),
+	//just in case it returns -1
 	if(block_disk_close()){
-		fprintf(stderr,"Error block_disk_close\n");
 		return -1;
 	}
-	//fprintf(stderr,"fd_total at time of unmount %d\n",fd_total);
 	free(SB);
 	free(RD);
 	free(fat->f_table);
@@ -214,22 +196,12 @@ int fs_info(void)
 		return -1;
 	}
 	
-  /*FS Info:
-    total_blk_count=8198
-    fat_blk_count=4
-    rdir_blk=5
-    data_blk=6
-    data_blk_count=8192
-    fat_free_ratio=8191/8192
-    rdir_free_ratio=128/128*/
-
 	fprintf(stdout,"FS Info:\n");
-	//fprintf(stderr,"Signature: %s\n",SB->Sig);
-	fprintf(stdout,"total_blk_count=%d\n",SB->tNumBlocks);//not sure if sould use %d
+	fprintf(stdout,"total_blk_count=%d\n",SB->tNumBlocks);
 	fprintf(stdout,"fat_blk_count=%d\n",SB->nFAT_Blocks);
 	fprintf(stdout,"rdir_blk=%d\n",SB->rdb_Index);
 	fprintf(stdout,"data_blk=%d\n",SB->d_block_start);
-	fprintf(stdout,"data_blk_count=%d\n",SB->nDataBlocks);//not sure if sould use %d
+	fprintf(stdout,"data_blk_count=%d\n",SB->nDataBlocks);
 	fprintf(stdout,"fat_free_ratio=%d/%d\n",free_FAT_blocks(),SB->nDataBlocks);
 	fprintf(stdout,"rdir_free_ratio=%d/%d\n",free_RD_blocks(),FS_FILE_MAX_COUNT);
 	
@@ -241,7 +213,16 @@ int fs_info(void)
 
 int fs_create(const char *filename)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
+		return -1;
+	}
+	//ensure that the root directory isn't full
+	if(free_RD_blocks()<1){
+		return -1;
+	}
+	//ensure that the FAT table isn't full
+	if(free_FAT_blocks()<1){
 		return -1;
 	}
 	//check if ptr is valid
@@ -252,8 +233,7 @@ int fs_create(const char *filename)
 	//check if filename is valid
 	int i = 0;
 	while (filename[i] != '\0') {
-		if (i+1==FS_FILENAME_LEN&&filename[i+1] != '\0'){
-			fprintf(stderr,"No NULL Terminator\n");
+		if ((i+1==FS_FILENAME_LEN)&&(filename[i] != '\0')){
 			return -1;
 		}
 		i++;
@@ -261,31 +241,30 @@ int fs_create(const char *filename)
 	//cannot have two files with same name
 	if(!file_exists(filename))
 		return -1;
-	struct Root_Dir * new_file = create_root(filename);//Root_Dir and dir have same index for this file
+	struct Root_Dir * new_file = create_root(filename);
 	strcpy(new_file->fname,filename);
 	new_file->fSize=0;
 	new_file->f_index=next_block();//
 	fat->f_table[new_file->f_index]=FAT_EOC;
-	//fprintf(stderr,"test create %d\n",new_file->f_index);
 	return 0;
 	/* TODO: Phase 2 */
 }
 
 int fs_delete(const char *filename)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
 		return -1;
 	}
+
 	int i=0; char null[1]={'\0'};
 	//check to see if filename is open in any file descriptors
 	for(int i=0; i<FS_OPEN_MAX_COUNT;i++){
 		if(strcmp(filedes[i].fd_filename,filename)==0){
-			//fprintf(stderr,"strcmp(filedes[i].fd_filename,filename\n");
 		    return -1;
 	    }
 	}
 	if(file_exist(filename)!=0||(strncmp(filename,null,1)==0)){
-		//fprintf(stderr,"file_exist(filename)!=0||(strncmp(filename,null,1)==0\n");
 		return -1;
 	}
 	while(i<FS_FILE_MAX_COUNT){
@@ -293,8 +272,8 @@ int fs_delete(const char *filename)
 			delete_file(RD[i].f_index);
 			delete_root(filename);
 			strcpy(RD[i].fname, null);
-	        RD[i].fSize=0;//not necessarry specified as xxx
-	        RD[i].f_index=FAT_EOC;//not necessarry specified as xxx
+	        RD[i].fSize=0;
+	        RD[i].f_index=FAT_EOC;
 			break;
 		}
 		i++;
@@ -304,13 +283,11 @@ int fs_delete(const char *filename)
 }
 
 int fs_ls(void)
-{    
+{   //ensure that mount has been sucessfully called
     if(FS_Mount==0){
 		return -1;
 	}
-	/*FS Ls:
-      file: newfile, size: 0, data_blk: 65535
-	  */
+	
 	int num_files=0;
 	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
         if(RD[i].fname[0]!='\0'){
@@ -328,6 +305,7 @@ int fs_ls(void)
 
 int fs_open(const char *filename)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
 		return -1;
 	}
@@ -338,16 +316,13 @@ int fs_open(const char *filename)
 	//check if filename is valid
 	int i = 0;
 	while (filename[i] != '\0') {
-		if (i > FS_FILENAME_LEN)
+		if (i+1 == FS_FILENAME_LEN)
 			return -1;
 		i++;
 	}
-	/*
-	 * check if the file exists
-	 * not yet implemented:
-	 * depends on the implementation of fs_create, etc.
-	 * should also check whether the file is valid
-	 */
+	//make sure fie exists before trying to open it
+	if(file_exists(filename)==-1)
+		return -1;
 
 	int j = 0;
 	//check if there is an available file des spot
@@ -361,13 +336,13 @@ int fs_open(const char *filename)
 	//initialize the file descriptor
 	fs_fd_init(j, filename);
     fd_total++;
-	//fprintf(stderr,"fd_open: %d\n",fd_total);
 	return j;
 	/* TODO: Phase 3 */
 }
 
 int fs_close(int fd)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
 		return -1;
 	}
@@ -380,13 +355,13 @@ int fs_close(int fd)
 	//set fd to intial value
 	filedes[fd].fd_filename[0]='\0';
 	fd_total--;
-	//fprintf(stderr,"fd_close: %d",fd_total);
 	return 0;
 	/* TODO: Phase 3 */
 }
 
 int fs_stat(int fd)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
 		return -1;
 	}
@@ -413,6 +388,7 @@ int fs_stat(int fd)
 
 int fs_lseek(int fd, size_t offset)
 {
+	//ensure that mount has been sucessfully called
 	if(FS_Mount==0){
 		return -1;
 	}
@@ -631,7 +607,7 @@ int update_RD(){
 }
 int read_in_FAT(){
 	
-	int size=0, y=0;// ret = 0;
+	int size=0, y=0;
 	char *new_array =resize_buffer((char *)fat->f_table,SB->nDataBlocks*sizeof(uint16_t),&size);
 	int retVals[SB->rdb_Index-1];
 	for(int i =1; i<SB->rdb_Index; i++){
@@ -643,15 +619,10 @@ int read_in_FAT(){
 		}
 	}
 	uint16_t * upFAT=(uint16_t*)new_array;
-	for(int i =0; i<SB->nDataBlocks; i++){//the indexing may lead to a segfault
+	for(int i =0; i<SB->nDataBlocks; i++){
 		fat->f_table[i]=upFAT[i];
 	}
 	
-	/*for(int i=0; i<SB->nDataBlocks; i++){
-		if(fat->f_table[i]!=0){
-			fprintf(stderr,"Used Fat block %d: %d\n",i,fat->f_table[i]);
-		}
-	}*/
 	
 	free(new_array);
 	return 0;
@@ -733,16 +704,11 @@ int file_exist(const char * fname){
 
 int delete_file(int fir_block){
     int temp =0; 
-	//char * null= calloc(BLOCK_SIZE, sizeof(char));
-	//memset( null, '\0', BLOCK_SIZE *sizeof(char) );
+	
     
-    //bool not_at_end=false;
     for(int i=0; i<SB->nDataBlocks; i++){
         if(fat->f_table[fir_block]==FAT_EOC){
             fat->f_table[fir_block]=0;
-		    //zero out corresponding data block, might not be necesary
-            //block_write(SB.f_block_start+fir_block,null);
-		
             return 0;
         }
         temp = fat->f_table[fir_block];
@@ -807,10 +773,6 @@ int free_RD_blocks(){
 //phase 3 helper functions
 static int fs_fd_init(int fd, const char *filename)
 {
-	//filedes[fd] = malloc(sizeof(fs_filedes));
-	//if (filedes[fd] == NULL)
-	//	return -1;
-
 	filedes[fd].fd_offset = 0;
 	strcpy(filedes[fd].fd_filename, filename);
 
@@ -821,7 +783,7 @@ static int fs_fd_init(int fd, const char *filename)
 int return_rd(char * fd_name){
     
     for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-		//make sure file
+		//compare input string to filenames in root directory
         if((strcmp(RD[i].fname,fd_name)==0)){
           return i;
         }
@@ -842,7 +804,7 @@ int fd_exists(int fd)
 int file_exists(const char * fd_name)
 {
 	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
-		//make sure file exists
+		//compare input string to filenames in root directory
         if((strcmp(RD[i].fname,fd_name)==0)){
           return 0;
         }
