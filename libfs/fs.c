@@ -27,7 +27,7 @@ static int fs_fd_init(int fd, const char *filename);
 int return_rd(char * fd_name);
 int next_block();
 int fd_exists(int fd);
-uint32_t file_extend(int fd, size_t blockcount);
+uint32_t file_extend(int fd, uint16_t blockcount);
 
 typedef struct __attribute__((__packed__)) sBlock{
 	
@@ -357,7 +357,7 @@ int fs_stat(int fd)
 	} else {
 		for(int i=0; i<128;i++){
 			//make sure file still exists
-			if(strcmp(RD[i].fname, filedes[fd].fd_filename == 0)){
+			if(strcmp(RD[i].fname, filedes[fd].fd_filename)==0){
 				return RD[i].fSize;
 			}
 			
@@ -529,6 +529,7 @@ int fs_read(int fd, void *buf, size_t count)
 		} else {
 			start_offset = 0;
 		}
+		//printf("start_offset: %u\n", start_offset);
 
 		//if curblock is the last of the chain
 		if (fat->f_table[curblock] == FAT_EOC || bytes_remaining < BLOCK_SIZE) {
@@ -543,15 +544,19 @@ int fs_read(int fd, void *buf, size_t count)
 		} else {
 			end_offset = BLOCK_SIZE - 1;
 		}
+		//printf("end_offset: %u\n", end_offset);
 
 		read_amt = end_offset - start_offset + 1;
 
 		//printf("curblock: %u\n", curblock);
 
+		//printf("buf_index: %u\n", buf_index);
+
 		if (block_read(curblock, bounce_buf))
 			return -1;
 
 		memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
+		//printf("bb: %s\n", (char*) bounce_buf);
 
 		bytes_remaining -= read_amt;
 		buf_index += read_amt;
@@ -718,10 +723,10 @@ int delete_file(int fir_block){
 struct Root_Dir * create_root(const char *file_n){
 	
 	for(int i=0; i<128; i++){
-		  if(RD[i].fname[0]=='\0'){
+		if(RD[i].fname[0]=='\0'){
 			strcpy(RD[i].fname, file_n);
-		  return RD+i;
-		  }
+			return RD+i;
+		}
 		/*if(dir[i]==0){
 		  dir[i]=1;
 		  return RD+i;
@@ -729,9 +734,10 @@ struct Root_Dir * create_root(const char *file_n){
 	}
 	return NULL;
 }
+
 int next_block(){
-	int i =0;
-	while(i<SB->nDataBlocks){
+	int i =SB->d_block_start;
+	while(i<SB->nDataBlocks + SB->d_block_start){
 		if(fat->f_table[i]==0){
 			return i;
 		}
@@ -779,7 +785,7 @@ int fd_exists(int fd)
 
 //anything which interacts with the packed structs must be in uint typing
 //returns the number of blocks added, which is as many as possible.
-uint32_t file_extend(int fd, size_t blockcount)
+uint32_t file_extend(int fd, uint16_t blockcount)
 {
 	//next available data block in FAT
 	int alloc_block;
