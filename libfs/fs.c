@@ -44,6 +44,7 @@ typedef struct __attribute__((__packed__)) FAT{
 	
 	uint16_t *f_table;//will dynamically allocate, = nDataBlocks
 }t2;
+
 typedef struct __attribute__((__packed__)) Root_Dir{
 	
 	char fname[FS_FILENAME_LEN];
@@ -429,7 +430,7 @@ int fs_write(int fd, void *buf, size_t count)
 		//if it is the first or last block to write, preserve
 		//the data outside of the write
 		if (curblock == firstblock || bytes_remaining < BLOCK_SIZE) {
-			if (block_read(curblock, bounce_buf))
+			if (block_read(curblock + SB->d_block_start, bounce_buf))
 				return -1;
 		}
 
@@ -445,7 +446,7 @@ int fs_write(int fd, void *buf, size_t count)
 
 		memcpy(bounce_buf + start_offset, buf + buf_index, write_amt);
 
-		if (block_write(curblock, bounce_buf))
+		if (block_write(curblock + SB->d_block_start, bounce_buf))
 			return -1;
 
 		//cleanup for next iteration
@@ -548,11 +549,11 @@ int fs_read(int fd, void *buf, size_t count)
 
 		read_amt = end_offset - start_offset + 1;
 
-		//printf("curblock: %u\n", curblock);
+		printf("curblock: %u\n", curblock);
 
 		//printf("buf_index: %u\n", buf_index);
 
-		if (block_read(curblock, bounce_buf))
+		if (block_read(curblock + SB->d_block_start, bounce_buf))
 			return -1;
 
 		memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
@@ -736,8 +737,8 @@ struct Root_Dir * create_root(const char *file_n){
 }
 
 int next_block(){
-	int i =SB->d_block_start;
-	while(i<SB->nDataBlocks + SB->d_block_start){
+	int i =0;
+	while(i<SB->nDataBlocks){
 		if(fat->f_table[i]==0){
 			return i;
 		}
