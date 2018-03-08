@@ -223,9 +223,11 @@ int fs_create(const char *filename)
 		return -1;
 	}
 	//ensure that the FAT table isn't full
+	/*
 	if(free_FAT_blocks()<1){
 		return -1;
 	}
+	*/
 	//check if ptr is valid
 	if (filename == NULL)
 		return -1;
@@ -442,6 +444,22 @@ int fs_write(int fd, void *buf, size_t count)
 
 	//Current = the first index of the file pointed at by fd
 	uint16_t firstblock = RD[fsrd].f_index;
+
+
+	//If the file needs to be intialized
+	if (firstblock == FAT_EOC) {
+		int nextb = next_block();
+		if (nextb == -1) {
+			//No more data blocks to append
+			return 0;
+		} else {
+			RD[fsrd].f_index = nextb;
+			fat->f_table[nextb] = FAT_EOC;
+			firstblock = nextb;
+		}
+	}
+
+	//Current block in the chain
 	uint16_t curblock = firstblock;
 
 	int filesize = RD[fsrd].fSize;
@@ -542,8 +560,6 @@ int fs_read(int fd, void *buf, size_t count)
 	int bytes_remaining = count;
 	uint16_t start_offset = 0;
 	uint16_t end_offset = 0;
-
-
 
 	//which index of block from FAT to read from: ceiling(offset/BLOCK_SIZE)
 	//Division of integers returns floor(a/b)

@@ -185,46 +185,35 @@ cmp_output rm test3
 ./test_fs.x rm libdisk.fs test4 >lib.stdout 2>lib.stderr
 cmp_output rm test4
 
-# Write two files of size 96,000 bytes
+# add file which is perfectly fitted to the data block size
 num=0
-while [ $num -lt 2999 ]
+while [ $num -lt 6400 ]
 do
-    echo "test six, 96,000 bytes aaaaaaaa" >> test6
+    echo "test num four should be 32 bytes" >> test4
     num=$(($num+1))
 done
 
-./fs_ref.x info refdisk.fs
-./test_fs.x info libdisk.fs
+./fs_ref.x add refdisk.fs test4 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test4 >lib.stdout 2>lib.stderr
+cmp_output write test4 204,800 bytes
 
-./fs_ref.x add refdisk.fs test6 >ref.stdout 2>ref.stderr
-./test_fs.x add libdisk.fs test6 >lib.stdout 2>lib.stderr
-cmp_output write test6 96,000 bytes
+# attempt to write a file when the file system is full
+cat test4 > test5
+./fs_ref.x add refdisk.fs test5 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test5 >lib.stdout 2>lib.stderr
+cmp_output write test5 fs full
 
-cat test6 > test7
+rm test4
 
-./fs_ref.x add refdisk.fs test7 >ref.stdout 2>ref.stderr
-./test_fs.x add libdisk.fs test7 >lib.stdout 2>lib.stderr
-cmp_output write test7 96,000 bytes
+# ls after write failure
+./fs_ref.x ls refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x ls libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output ls after write failed
 
-echo "adsdf" > test8
-cat test8 > test9
-
-./fs_ref.x add refdisk.fs test8 >ref.stdout 2>ref.stderr
-./test_fs.x add libdisk.fs test8 >lib.stdout 2>lib.stderr
-cmp_output write test8 6 bytes
-
-./fs_ref.x info refdisk.fs
-./test_fs.x info libdisk.fs
-
-./fs_ref.x add refdisk.fs test9 >ref.stdout 2>ref.stderr
-./test_fs.x add libdisk.fs test9 >lib.stdout 2>lib.stderr
-cmp_output write test9 6 bytes
-
-rm test6 test7 test8 test9
-
-
-
-
+# read an empty file
+./fs_ref.x cat refdisk.fs test5 >ref.stdout 2>ref.stderr
+./test_fs.x cat libdisk.fs test5 >lib.stdout 2>lib.stderr
+cmp_output read empty file
 
 # clean
 rm refdisk.fs libdisk.fs
