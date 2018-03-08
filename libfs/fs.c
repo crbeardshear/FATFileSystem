@@ -245,6 +245,9 @@ int fs_create(const char *filename)
 	if(!file_exists(filename))
 		return -1;
 	struct Root_Dir * new_file = create_root(filename);
+	//make sure an entry was returned
+	if(new_file==NULL)
+		return -1;
 	strcpy(new_file->fname,filename);
 	//set the new files size to 0 and its first data block index to FAT_EOC
 	new_file->fSize=0;
@@ -764,7 +767,7 @@ struct Root_Dir * create_root(const char *file_n){
 }
 int next_block(){
 	
-	for(int i =0; i<SB->nDataBlocks; i++){
+	for(int i =1; i<SB->nDataBlocks; i++){
 		if(fat->f_table[i]==0){
 			return i;
 		}
