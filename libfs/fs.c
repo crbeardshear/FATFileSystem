@@ -413,26 +413,34 @@ int fs_lseek(int fd, size_t offset)
 
 int fs_write(int fd, void *buf, size_t count)
 {
+	//Error checking before the writes
 	if (fd > FS_OPEN_MAX_COUNT)
 		return -1;
 
 	if (fd_exists(fd))
 		return -1;
 
+	//The bounce buffer for cases where we need to preserve existing data
 	void *bounce_buf = malloc(BLOCK_SIZE);
-	int buf_index = 0;
-	int bytes_remaining = count;
+
+	//These variables reflect the status of the file
 	int file_offset = filedes[fd].fd_offset;
 	int block_offset = file_offset % BLOCK_SIZE;
-	int write_amt = 0;
 	int fsrd = return_rd(filedes[fd].fd_filename);
+
+	//These variables are for coordinating the write itself
 	uint16_t end_offset = 0;
 	uint16_t start_offset = 0;
 	uint32_t ext_blocks = 0;
+	int buf_index = 0;
+	int write_amt = 0;
+	int bytes_remaining = count;
 
-	//integer division returns the floor
+	//Integer division in C returns the floor
+	//The block number in the chain which corresponds to the file offset
 	int target_blocknum = filedes[fd].fd_offset / BLOCK_SIZE;
-	//current = the first index of the file pointed at by fd
+
+	//Current = the first index of the file pointed at by fd
 	uint16_t firstblock = RD[fsrd].f_index;
 	uint16_t curblock = firstblock;
 
@@ -448,7 +456,6 @@ int fs_write(int fd, void *buf, size_t count)
 			start_offset = block_offset;
 		} else {
 			start_offset = 0;
-			//copy over read_amt bytes to bounce_buf
 		}
 
 		//if it is the first or last block to write, preserve
@@ -520,20 +527,23 @@ int fs_read(int fd, void *buf, size_t count)
 	if (fd_exists(fd))
 		return -1;
 
-	//used for first and last block
+	//Used for first and last block
 	void *bounce_buf = malloc(BLOCK_SIZE);
 
-	//index in *buf which is currently being copied to
-	int read_amt = 0;
-	int buf_index = 0;
-	int bytes_remaining = count;
+	//Data about the file
 	int file_offset = filedes[fd].fd_offset;
 	int block_offset = file_offset % BLOCK_SIZE;
 	int fsrd = return_rd(filedes[fd].fd_filename);
+	int filesize = RD[fsrd].fSize;
+
+	//Variables manipulated to read the correct portion
+	int read_amt = 0;
+	int buf_index = 0;
+	int bytes_remaining = count;
 	uint16_t start_offset = 0;
 	uint16_t end_offset = 0;
 
-	int filesize = RD[fsrd].fSize;
+
 
 	//which index of block from FAT to read from: ceiling(offset/BLOCK_SIZE)
 	//Division of integers returns floor(a/b)
@@ -554,7 +564,6 @@ int fs_read(int fd, void *buf, size_t count)
 		} else {
 			start_offset = 0;
 		}
-		//printf("start_offset: %u\n", start_offset);
 
 		//if curblock is the last of the chain
 		if (fat->f_table[curblock] == FAT_EOC || bytes_remaining < BLOCK_SIZE) {
@@ -569,19 +578,13 @@ int fs_read(int fd, void *buf, size_t count)
 		} else {
 			end_offset = BLOCK_SIZE - 1;
 		}
-		//printf("end_offset: %u\n", end_offset);
 
 		read_amt = end_offset - start_offset + 1;
-
-		//printf("curblock: %u\n", curblock);
-
-		//printf("buf_index: %u\n", buf_index);
 
 		if (block_read(curblock + SB->d_block_start, bounce_buf))
 			return -1;
 
 		memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
-		//printf("bb: %s\n", (char*) bounce_buf);
 
 		bytes_remaining -= read_amt;
 		buf_index += read_amt;
@@ -597,7 +600,6 @@ int fs_read(int fd, void *buf, size_t count)
 
 	return buf_index;
 }
-
 
 int read_in_RD(){
 	//write root directory block to first data block index
@@ -618,7 +620,7 @@ int read_in_FAT(){
 	for(int i =1; i<SB->rdb_Index; i++){
 		y=i-1;
 		retVals[i]=block_read(i,new_array+(y*BLOCK_SIZE));
-		if(retVals[i]==-1){
+		if(retVals[i]==-1) {
 			free(new_array);
 			return -1;
 		}
@@ -633,6 +635,7 @@ int read_in_FAT(){
 	return 0;
 	/* TODO: Phase 1 */
 }
+
 int update_FAT(){
 	
 	int size=0,y=0;// ret = 0;
@@ -641,7 +644,7 @@ int update_FAT(){
 	//fprintf(stderr,"New size %d",size);
 	for(int i=1; i<SB->rdb_Index; i++){
 		y=i-1;
-		retVals[i]=block_write(i,fat->f_table+(y*BLOCK_SIZE));
+		retVals[i]=block_write(i,fat->f_table + (y*BLOCK_SIZE));
 		if(retVals[i]==-1){
 			free(new_array);
 			return -1;
@@ -656,6 +659,7 @@ int update_FAT(){
 	return 0;
 	/* TODO: Phase 1 */
 }
+
 //old size is in bytes
 char * resize_buffer(char * buffer, int old_size, int * new_size){
 	char * new_buffer;

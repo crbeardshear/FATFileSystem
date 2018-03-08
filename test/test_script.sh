@@ -19,6 +19,8 @@ cmp_output()
     if [ "$REF_STDOUT" != "$LIB_STDOUT" ]; then
         echo "Stdout outputs don't match..."
         diff -u ref.stdout lib.stdout
+	echo "REF: $REF_STDOUT"
+	echo "LIB: $LIB_STDOUT"
     else
         echo "Stdout outputs match!"
     fi
@@ -27,6 +29,8 @@ cmp_output()
     if [ "$REF_STDERR" != "$LIB_STDERR" ]; then
         echo "Stderr outputs don't match..."
         diff -u ref.stderr lib.stderr
+	echo "REF: $REF_STDERR"
+	echo "LIB: $LIB_STDERR"
     else
         echo "Stderr outputs match!"
     fi
@@ -57,7 +61,6 @@ testnum=1
 cmp_output info
 
 # Compare the add command: first create a file of length 5000
-
 num=0
 while [ $num -lt 1000 ]
 do
@@ -67,13 +70,16 @@ done
 
 ./fs_ref.x add refdisk.fs test1 >ref.stdout 2>ref.stderr
 ./test_fs.x add libdisk.fs test1 >lib.stdout 2>lib.stderr
-
-# compare fs_ref.x to test_fs.x
 cmp_output write test1 5,000 bytes
 
 rm test1
 
-#add length 50000
+# add file which doesn't exist
+./fs_ref.x add refdisk.fs test10 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test10 >lib.stdout 2>lib.stderr
+cmp_output write nonexistent test10
+
+# add test2: length 50000
 num=0
 while [ $num -lt 10000 ]
 do
@@ -121,8 +127,7 @@ do
 done
 
 ./fs_ref.x add refdisk.fs test3 >ref.stdout 2>ref.stderr
-./test_fs.x add libdisk.fs test3 >lib.stdout 2>lib.stderr\
-
+./test_fs.x add libdisk.fs test3 >lib.stdout 2>lib.stderr
 cmp_output write test3 230,000 bytes
 rm test3
 
@@ -131,11 +136,24 @@ rm test3
 ./test_fs.x stat libdisk.fs test3 >lib.stdout 2>lib.stderr
 cmp_output stat test3
 
+# read the truncated test3 we wrote
+./fs_ref.x cat refdisk.fs test3 >ref.stdout 2>ref.stderr
+./test_fs.x cat libdisk.fs test3 >lib.stdout 2>lib.stderr
+cmp_output cat test3
+
 # add file with conflicting name
 echo "test" > test1
 ./fs_ref.x add refdisk.fs test1 >ref.stdout 2>ref.stderr
 ./test_fs.x add libdisk.fs test1 >lib.stdout 2>lib.stderr
 cmp_output add test1 conflict
+
+rm test1
+
+# check if the file has the correct value after attempting to write conflicting
+# names
+./fs_ref.x cat refdisk.fs test1 >ref.stdout 2>ref.stderr
+./test_fs.x cat libdisk.fs test1 >lib.stdout 2>lib.stderr
+cmp_output correct read after conflict
 
 # remove one of the files (test1)
 ./fs_ref.x rm refdisk.fs test1 >ref.stdout 2>ref.stderr
@@ -157,10 +175,56 @@ cmp_output info after conflict
 ./test_fs.x rm libdisk.fs test2 >lib.stdout 2>lib.stderr
 cmp_output rm test2
 
-# remove last of the files (test3)
+# remove one of the files (test3)
 ./fs_ref.x rm refdisk.fs test3 >ref.stdout 2>ref.stderr
 ./test_fs.x rm libdisk.fs test3 >lib.stdout 2>lib.stderr
 cmp_output rm test3
+
+# remove last of the files (test4)
+./fs_ref.x rm refdisk.fs test4 >ref.stdout 2>ref.stderr
+./test_fs.x rm libdisk.fs test4 >lib.stdout 2>lib.stderr
+cmp_output rm test4
+
+# Write two files of size 96,000 bytes
+num=0
+while [ $num -lt 2999 ]
+do
+    echo "test six, 96,000 bytes aaaaaaaa" >> test6
+    num=$(($num+1))
+done
+
+./fs_ref.x info refdisk.fs
+./test_fs.x info libdisk.fs
+
+./fs_ref.x add refdisk.fs test6 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test6 >lib.stdout 2>lib.stderr
+cmp_output write test6 96,000 bytes
+
+cat test6 > test7
+
+./fs_ref.x add refdisk.fs test7 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test7 >lib.stdout 2>lib.stderr
+cmp_output write test7 96,000 bytes
+
+echo "adsdf" > test8
+cat test8 > test9
+
+./fs_ref.x add refdisk.fs test8 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test8 >lib.stdout 2>lib.stderr
+cmp_output write test8 6 bytes
+
+./fs_ref.x info refdisk.fs
+./test_fs.x info libdisk.fs
+
+./fs_ref.x add refdisk.fs test9 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test9 >lib.stdout 2>lib.stderr
+cmp_output write test9 6 bytes
+
+rm test6 test7 test8 test9
+
+
+
+
 
 # clean
 rm refdisk.fs libdisk.fs
