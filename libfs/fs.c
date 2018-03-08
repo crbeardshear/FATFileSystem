@@ -276,8 +276,15 @@ int fs_delete(const char *filename)
 	}
 	
 	while(i<FS_FILE_MAX_COUNT){
-		if((strcmp(RD[i].fname,filename)==0)){
+		if((strcmp(RD[i].fname,filename)==0)&&(RD[i].f_index!=FAT_EOC)){
 			delete_file(RD[i].f_index);
+			delete_root(filename);
+			RD[i].fSize=0;
+			RD[i].f_index=FAT_EOC;
+			break;
+		}
+		//if file is empty it shouldn't be sent to delete_file()
+		if((strcmp(RD[i].fname,filename)==0)&&(RD[i].f_index==FAT_EOC)){ 
 			delete_root(filename);
 			RD[i].fSize=0;
 			RD[i].f_index=FAT_EOC;
