@@ -261,7 +261,7 @@ int fs_delete(const char *filename)
 	}
 
 	//validate filename
-	int i=0;
+	
 	char null[1] = {'\0'};
 
 	if(file_exist(filename)!=0||(strncmp(filename,null,1)==0)){
@@ -269,12 +269,12 @@ int fs_delete(const char *filename)
 	}
 
 	//check to see if filename is open in any file descriptors
-	for(int i=0; i<FS_OPEN_MAX_COUNT;i++){
-		if(strcmp(filedes[i].fd_filename,filename)==0){
+	for(int z=0; z<FS_OPEN_MAX_COUNT;z++){
+		if(strcmp(filedes[z].fd_filename,filename)==0){
 			return -1;
 		}
 	}
-	
+	int i=0;
 	while(i<FS_FILE_MAX_COUNT){
 		if((strcmp(RD[i].fname,filename)==0)&&(RD[i].f_index!=FAT_EOC)){
 			delete_file(RD[i].f_index);
