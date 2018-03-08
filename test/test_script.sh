@@ -215,5 +215,15 @@ cmp_output ls after write failed
 ./test_fs.x cat libdisk.fs test5 >lib.stdout 2>lib.stderr
 cmp_output read empty file
 
+# rm empty file
+./fs_ref.x rm refdisk.fs test5 >ref.stdout 2>ref.stderr
+./test_fs.x rm libdisk.fs test5 >lib.stdout 2>lib.stderr
+cmp_output rm test5 empty file
+
+# info after rm empty file
+./fs_ref.x info refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x info libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output info after rm empty
+
 # clean
 rm refdisk.fs libdisk.fs
