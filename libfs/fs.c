@@ -244,9 +244,9 @@ int fs_create(const char *filename)
 		return -1;
 	struct Root_Dir * new_file = create_root(filename);
 	strcpy(new_file->fname,filename);
+	//set the new files size to 0 and its first data block index to FAT_EOC
 	new_file->fSize=0;
-	new_file->f_index=next_block();//
-	fat->f_table[new_file->f_index]=FAT_EOC;
+	new_file->f_index=FAT_EOC;
 	return 0;
 	/* TODO: Phase 2 */
 }
@@ -638,23 +638,22 @@ int read_in_FAT(){
 
 int update_FAT(){
 	
-	int size=0,y=0;// ret = 0;
+	int size=0,y=0;
+	//new_array conatains all contents of fat->f_table and is
+	//an ammount of bytes that is a multiple of BLOCK_SIZE
 	char *new_array =resize_buffer((char*)fat->f_table,SB->nDataBlocks*sizeof(uint16_t),&size);
 	int retVals[SB->rdb_Index-1];
-	//fprintf(stderr,"New size %d",size);
+	
+	//write new_array into disk where FAT table is located
 	for(int i=1; i<SB->rdb_Index; i++){
 		y=i-1;
-		retVals[i]=block_write(i,fat->f_table + (y*BLOCK_SIZE));
+		retVals[i]=block_write(i,new_array + (y*BLOCK_SIZE));
 		if(retVals[i]==-1){
 			free(new_array);
 			return -1;
 		}
 	}
-	/*for(int i=0; i<SB->nDataBlocks; i++){
-		if(fat->f_table[i]!=0){
-			fprintf(stderr,"Used Fat blocks %d\n",i);
-		}
-	}*/
+	
 	free(new_array);
 	return 0;
 	/* TODO: Phase 1 */
@@ -722,15 +721,7 @@ int delete_file(int fir_block){
 		}
 		temp = fat->f_table[fir_block];
 		fat->f_table[fir_block]=0;
-		//zero out corresponding data block, cannot ignore data in
-		//data blocks, it may accidentally be read in later on fs_read,
-		//might not be necesary, because whole block is overwritten
-		//block_write(SB.f_block_start+fir_block,null);
-		//zeroing out corresponding Fat block index may not becasue
-		//necesary because will not be reading from fat table blocks
-		//and will totally overwrite totally these blocks when writing
-		//to fat table
-		//Will need to update FAT blocks and Root directory blocks at end
+		
 	
 		fir_block = temp;
 	}
