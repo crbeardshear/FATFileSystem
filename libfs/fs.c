@@ -478,9 +478,9 @@ int fs_write(int fd, void *buf, size_t count)
 		buf_index += write_amt;
 
 		//check if the file needs to be extended
-		if (fat->f_table[curblock] == FAT_EOC && bytes_remaining > BLOCK_SIZE) {
+		if (fat->f_table[curblock] == FAT_EOC && bytes_remaining > 0) {
 			ext_blocks = file_extend(fd, ceilingdiv(bytes_remaining, BLOCK_SIZE));
-
+			
 			//If writing more than is available after extension, write as much
 			//as possible
 			if (bytes_remaining > ext_blocks * BLOCK_SIZE) {
@@ -496,7 +496,7 @@ int fs_write(int fd, void *buf, size_t count)
 
 	//if we wrote additional blocks to file
 	if (filesize < file_offset + buf_index) {
-		RD[fsrd].fSize += file_offset + buf_index - filesize;
+		RD[fsrd].fSize = file_offset + buf_index;
 		if (update_RD())
 			return -1;
 	}
@@ -573,7 +573,7 @@ int fs_read(int fd, void *buf, size_t count)
 
 		read_amt = end_offset - start_offset + 1;
 
-		printf("curblock: %u\n", curblock);
+		//printf("curblock: %u\n", curblock);
 
 		//printf("buf_index: %u\n", buf_index);
 
@@ -851,8 +851,6 @@ uint32_t file_extend(int fd, uint16_t blockcount)
 		//for updating the file's entry in root dir
 		blocks_added++;
 	}
-
-	RD[fsrd].fSize += blocks_added;
 	
 	return blocks_added;
 }

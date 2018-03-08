@@ -55,22 +55,16 @@ testnum=1
 # compare fs_ref.x to test_fs.x
 cmp_output info
 
-# this test is failing atm, working on a solution
 # Compare the add command: first create a file of length 5000
-num=0
 
+num=0
 while [ $num -lt 1000 ]
 do
     echo "test" >> ln5000
     num=$(($num+1))
 done
 
-ls -l ln5000
-
-# get fs_info from reference lib
 ./fs_ref.x add refdisk.fs ln5000 >ref.stdout 2>ref.stderr
-
-# get fs_info from my lib
 ./test_fs.x add libdisk.fs ln5000 >lib.stdout 2>lib.stderr
 
 # compare fs_ref.x to test_fs.x
