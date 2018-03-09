@@ -19,8 +19,8 @@ cmp_output()
     if [ "$REF_STDOUT" != "$LIB_STDOUT" ]; then
         echo "Stdout outputs don't match..."
         diff -u ref.stdout lib.stdout
-	echo "REF: $REF_STDOUT"
-	echo "LIB: $LIB_STDOUT"
+	#echo "REF: $REF_STDOUT"
+	#echo "LIB: $LIB_STDOUT"
     else
         echo "Stdout outputs match!"
     fi
@@ -29,8 +29,8 @@ cmp_output()
     if [ "$REF_STDERR" != "$LIB_STDERR" ]; then
         echo "Stderr outputs don't match..."
         diff -u ref.stderr lib.stderr
-	echo "REF: $REF_STDERR"
-	echo "LIB: $LIB_STDERR"
+	#echo "REF: $REF_STDERR"
+	#echo "LIB: $LIB_STDERR"
     else
         echo "Stderr outputs match!"
     fi
@@ -224,6 +224,21 @@ cmp_output rm test5 empty file
 ./fs_ref.x info refdisk.fs >ref.stdout 2>ref.stderr
 ./test_fs.x info libdisk.fs >lib.stdout 2>lib.stderr
 cmp_output info after rm empty
+
+# clean
+rm refdisk.fs libdisk.fs
+
+# one entry in fat table
+./fs_make.x refdisk.fs 1
+./fs_make.x libdisk.fs 1
+
+# adding any file to fs with single data block should fail
+echo "test" > test11
+./fs_ref.x add refdisk.fs test11 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs test11 >lib.stdout 2>lib.stderr
+cmp_output add, fat 1 block
+
+rm test11
 
 # clean
 rm refdisk.fs libdisk.fs
