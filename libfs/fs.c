@@ -646,13 +646,13 @@ int fs_read(int fd, void *buf, size_t count)
 
 //phase 1-2 helper functions
 int read_in_RD(){
-	//write root directory block to first data block index
+	//read root directory block from root dir block index
 	int ret = block_read(SB->rdb_Index,RD);
 	return ret;
 }
 
 int update_RD(){
-	//write root directory block to first data block index
+	//write root directory block to root dir block index
 	int ret = block_write(SB->rdb_Index,RD);
 	return ret;
 }
