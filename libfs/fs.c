@@ -704,7 +704,8 @@ char * resize_buffer(char * buffer, int old_size, int * new_size){
 		int num_bytes = blocks*BLOCK_SIZE;
 		*new_size=num_bytes;
 		new_buffer = calloc(num_bytes, sizeof(char));
-		for(int i=0; i<num_bytes; i++){
+		//iterate up to size of original buffer size, old_size
+		for(int i=0; i<old_size; i++){
 		 new_buffer[i]=buffer[i];
 		}
 		
