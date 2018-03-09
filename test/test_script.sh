@@ -2,10 +2,10 @@
 
 # Functions:
 # compares outputs of reference program and our library
+# the parameters are simply the test's name
 cmp_output()
 {
-    echo ""
-    echo "Test $testnum: $1 $2 $3 $4"
+    echo "\nTest $testnum: $1 $2 $3 $4"
     echo "Comparison for test $testnum:"
 
     # put output files into variables
@@ -19,8 +19,8 @@ cmp_output()
     if [ "$REF_STDOUT" != "$LIB_STDOUT" ]; then
         echo "Stdout outputs don't match..."
         diff -u ref.stdout lib.stdout
-	#echo "REF: $REF_STDOUT"
-	#echo "LIB: $LIB_STDOUT"
+	echo "REF: $REF_STDOUT"
+	echo "LIB: $LIB_STDOUT"
     else
         echo "Stdout outputs match!"
     fi
@@ -29,8 +29,8 @@ cmp_output()
     if [ "$REF_STDERR" != "$LIB_STDERR" ]; then
         echo "Stderr outputs don't match..."
         diff -u ref.stderr lib.stderr
-	#echo "REF: $REF_STDERR"
-	#echo "LIB: $LIB_STDERR"
+	echo "REF: $REF_STDERR"
+	echo "LIB: $LIB_STDERR"
     else
         echo "Stderr outputs match!"
     fi
@@ -59,6 +59,11 @@ testnum=1
 
 # compare fs_ref.x to test_fs.x
 cmp_output info
+
+# ls the file system, should have nothing
+./fs_ref.x ls refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x ls libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output ls empty
 
 # Compare the add command: first create a file of length 5000
 num=0
@@ -215,6 +220,16 @@ cmp_output ls after write failed
 ./test_fs.x cat libdisk.fs test5 >lib.stdout 2>lib.stderr
 cmp_output read empty file
 
+# stat the test11, should not exist
+./fs_ref.x stat refdisk.fs test5 >ref.stdout 2>ref.stderr
+./test_fs.x stat libdisk.fs test5 >lib.stdout 2>lib.stderr
+cmp_output stat test5 empty file
+
+# info after write failure
+./fs_ref.x info refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x info libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output info after empty file
+
 # rm empty file
 ./fs_ref.x rm refdisk.fs test5 >ref.stdout 2>ref.stderr
 ./test_fs.x rm libdisk.fs test5 >lib.stdout 2>lib.stderr
@@ -224,6 +239,27 @@ cmp_output rm test5 empty file
 ./fs_ref.x info refdisk.fs >ref.stdout 2>ref.stderr
 ./test_fs.x info libdisk.fs >lib.stdout 2>lib.stderr
 cmp_output info after rm empty
+
+# add file with too many characters in the file name
+echo "asdf" > thisfilenameistoolong
+./fs_ref.x add refdisk.fs thisfilenameistoolong >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs thisfilenameistoolong >lib.stdout 2>lib.stderr
+cmp_output write filename too long
+rm thisfilenameistoolong
+
+# add file with too many characters in the file name
+echo "asdf" > thisfilenameperf
+./fs_ref.x add refdisk.fs thisfilenameperf >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs thisfilenameperf >lib.stdout 2>lib.stderr
+cmp_output write filename 16
+rm thisfilenameperf
+
+# add file with too many characters in the file name
+echo "asdf" > thisisoneless1
+./fs_ref.x add refdisk.fs thisisoneless1 >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs thisisoneless1 >lib.stdout 2>lib.stderr
+cmp_output write filename 15
+rm thisisoneless1
 
 # clean
 rm refdisk.fs libdisk.fs
@@ -236,9 +272,30 @@ rm refdisk.fs libdisk.fs
 echo "test" > test11
 ./fs_ref.x add refdisk.fs test11 >ref.stdout 2>ref.stderr
 ./test_fs.x add libdisk.fs test11 >lib.stdout 2>lib.stderr
+cat ref.stdout
 cmp_output add, fat 1 block
 
 rm test11
+
+# ls after write failure
+./fs_ref.x ls refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x ls libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output ls after write failed
+
+# cat the test, should be empty
+./fs_ref.x cat refdisk.fs test11 >ref.stdout 2>ref.stderr
+./test_fs.x cat libdisk.fs test11 >lib.stdout 2>lib.stderr
+cmp_output cat test11
+
+# stat the test11, should be empty
+./fs_ref.x stat refdisk.fs test11 >ref.stdout 2>ref.stderr
+./test_fs.x stat libdisk.fs test11 >lib.stdout 2>lib.stderr
+cmp_output stat test11
+
+# info after empty file
+./fs_ref.x info refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x info libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output info
 
 # clean
 rm refdisk.fs libdisk.fs
