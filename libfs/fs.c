@@ -300,16 +300,14 @@ int fs_ls(void)
 	if(FS_Mount==0){
 		return -1;
 	}
+	
+	//Print fs ls once
+	fprintf(stdout,"FS Ls:\n");
+
 	//iterate through RD and print the information
 	//for entries that aren't empty
-	int num_files=0;
 	for(int i=0; i<FS_FILE_MAX_COUNT; i++){
 		if(RD[i].fname[0]!='\0'){
-			num_files++;
-			//only want to print 'FS ls:' once
-			if(num_files==1){
-				fprintf(stdout,"FS Ls:\n");
-			}
 			fprintf(stdout,"file: %s, size: %d, data_blk: %d\n",RD[i].fname,RD[i].fSize,RD[i].f_index);
 		}
 	
@@ -492,13 +490,6 @@ int fs_write(int fd, void *buf, size_t count)
 			start_offset = 0;
 		}
 
-		//if it is the first or last block to write, preserve
-		//the data outside of the write
-		if (curblock == firstblock || bytes_remaining < BLOCK_SIZE) {
-			if (block_read(curblock + SB->d_block_start, bounce_buf))
-				return -1;
-		}
-
 		//if writing less than block, write amt needed
 		if (bytes_remaining < BLOCK_SIZE) {
 			end_offset = bytes_remaining - 1;
@@ -509,10 +500,20 @@ int fs_write(int fd, void *buf, size_t count)
 
 		write_amt = end_offset - start_offset + 1;
 
-		memcpy(bounce_buf + start_offset, buf + buf_index, write_amt);
+		//If writing to the whole block, don't need to use a bounce buffer
+		if (write_amt == BLOCK_SIZE) {
+			if (block_write(curblock + SB->d_block_start, buf + buf_index))
+				return -1;
+		} else {
+			if (block_read(curblock + SB->d_block_start, bounce_buf))
+				return -1;
 
-		if (block_write(curblock + SB->d_block_start, bounce_buf))
-			return -1;
+			memcpy(bounce_buf + start_offset, buf + buf_index, write_amt);
+
+			if (block_write(curblock + SB->d_block_start, bounce_buf))
+				return -1;
+		}
+		
 
 		//cleanup for next iteration
 		bytes_remaining -= write_amt;
@@ -613,10 +614,16 @@ int fs_read(int fd, void *buf, size_t count)
 
 		read_amt = end_offset - start_offset + 1;
 
-		if (block_read(curblock + SB->d_block_start, bounce_buf))
-			return -1;
+		//If reading the whole block, don't need to use a bounce buffer
+		if (read_amt == BLOCK_SIZE) {
+			if (block_read(curblock + SB->d_block_start, buf + buf_index))
+				return -1;
+		} else {
+			if (block_read(curblock + SB->d_block_start, bounce_buf))
+				return -1;
 
-		memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
+			memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
+		}
 
 		bytes_remaining -= read_amt;
 		buf_index += read_amt;
