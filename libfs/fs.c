@@ -503,10 +503,16 @@ int fs_write(int fd, void *buf, size_t count)
 
 		write_amt = end_offset - start_offset + 1;
 
-		memcpy(bounce_buf + start_offset, buf + buf_index, write_amt);
+		//If writing to the whole block, copy directly
+		if (write_amt == BLOCK_SIZE) {
+			if (block_write(curblock + SB->d_block_start, buf + buf_index))
+				return -1;
+		} else {
+			memcpy(bounce_buf + start_offset, buf + buf_index, write_amt);
 
-		if (block_write(curblock + SB->d_block_start, bounce_buf))
-			return -1;
+			if (block_write(curblock + SB->d_block_start, bounce_buf))
+				return -1;
+		}
 
 		//cleanup for next iteration
 		bytes_remaining -= write_amt;
@@ -571,7 +577,6 @@ int fs_read(int fd, void *buf, size_t count)
 	uint16_t start_offset = 0;
 	uint16_t end_offset = 0;
 
-	//which index of block from FAT to read from: ceiling(offset/BLOCK_SIZE)
 	//Division of integers returns floor(a/b)
 	int target_blocknum = file_offset/BLOCK_SIZE;
 
@@ -591,26 +596,34 @@ int fs_read(int fd, void *buf, size_t count)
 			start_offset = 0;
 		}
 
-		//if curblock is the last of the chain
+		//If curblock is the last of the chain
 		if (fat->f_table[curblock] == FAT_EOC || bytes_remaining < BLOCK_SIZE) {
 			//If desired read is longer than the filesize
 			if (file_offset + count - 1 > filesize) {
 				//Read to end of file
 				end_offset = (filesize % BLOCK_SIZE) - 1;
 			} else {
-				//else read as many bytes as count
+				//Else read as many bytes as count
 				end_offset = count - buf_index - 1;
 			}
 		} else {
+			//Else read entire block
 			end_offset = BLOCK_SIZE - 1;
 		}
 
 		read_amt = end_offset - start_offset + 1;
 
-		if (block_read(curblock + SB->d_block_start, bounce_buf))
-			return -1;
+		//If reading the whole block, copy directly
+		if (read_amt == BLOCK_SIZE) {
+			if (block_read(curblock + SB->d_block_start, buf + buf_index))
+				return -1;
+		} else {
+			if (block_read(curblock + SB->d_block_start, bounce_buf))
+				return -1;
 
-		memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
+			memcpy(buf + buf_index, bounce_buf + start_offset, read_amt);
+		}
+		
 
 		bytes_remaining -= read_amt;
 		buf_index += read_amt;
