@@ -486,13 +486,6 @@ int fs_write(int fd, void *buf, size_t count)
 			start_offset = 0;
 		}
 
-		//if it is the first or last block to write, preserve
-		//the data outside of the write
-		if (curblock == firstblock || bytes_remaining < BLOCK_SIZE) {
-			if (block_read(curblock + SB->d_block_start, bounce_buf))
-				return -1;
-		}
-
 		//if writing less than block, write amt needed
 		if (bytes_remaining < BLOCK_SIZE) {
 			end_offset = bytes_remaining - 1;
@@ -508,8 +501,14 @@ int fs_write(int fd, void *buf, size_t count)
 			if (block_write(curblock + SB->d_block_start, buf + buf_index))
 				return -1;
 		} else {
+			//Read to bounce buffer
+			if (block_read(curblock + SB->d_block_start, bounce_buf))
+				return -1;
+
+			//Copy desired bytes to bounce buffer
 			memcpy(bounce_buf + start_offset, buf + buf_index, write_amt);
 
+			//Write to disk
 			if (block_write(curblock + SB->d_block_start, bounce_buf))
 				return -1;
 		}
