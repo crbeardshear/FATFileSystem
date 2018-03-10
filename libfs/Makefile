@@ -30,19 +30,22 @@ CFLAGS	+= -O0
 CFLAGS	+= -g
 endif
 
+DEPFLAGS = -MMD -MF $(@:.o=.d)
+
+objs := $(patsubst %.x,%.o,$(programs))
+
+deps := $(patsubst %.o,%.d,$(objs))
+-include $(deps)
+
 $(LIBN): $(LIBCL)
 	@echo "AR	$@"
 	$(Q)$(LIB) $(LIBN) $(LIBTARG)
 
-fs.o: fs.c
+%.o: %.c
 	@echo "CC	$@"
-	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
-
-disk.o: disk.c
-	@echo "CC	$@"
-	$(Q)$(CC) $(CFLAGS) -c -o $@ $<
+	$(Q)$(CC) $(CFLAGS) -c -o $@ $< $(DEPFLAGS)
 
 clean:
 	@echo "CLEAN	$(CUR_PWD)"
-	$(Q)rm -rf $(LIBN) $(LIBCL)
+	$(Q)rm -rf $(objs) $(deps) $(LIBN) $(LIBCL)
 

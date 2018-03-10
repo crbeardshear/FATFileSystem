@@ -259,6 +259,71 @@ void thread_fs_info(void *arg)
 		die("Cannot unmount diskname");
 }
 
+//tests the lseek function
+//Reads half of the file, rounded up
+void thread_fs_lseek(void *arg)
+{
+	struct thread_arg *t_arg = arg;
+	char *diskname, *filename, *buf;
+	int fs_fd;
+	size_t stat, read;
+
+	if (t_arg->argc < 2)
+		die("Usage: <diskname> <host filename>");
+
+	diskname = t_arg->argv[0];
+	filename = t_arg->argv[1];
+
+	if (fs_mount(diskname))
+		die("Cannot mount diskname");
+
+	fs_fd = fs_open(filename);
+	if (fs_fd < 0) {
+		fs_umount();
+		die("Cannot open file");
+	}
+
+	stat = fs_stat(fs_fd);
+	if (stat < 0) {
+		fs_umount();
+		die("Cannot stat file");
+	}
+
+	if (!stat) {
+		printf("Empty file\n");
+		return;
+	}
+
+	buf = malloc(stat/2);
+	if (!buf) {
+		perror("malloc");
+		fs_umount();
+		die("Cannot malloc");
+	}
+
+	//lseek to halfway in the file, rounded up.
+	//Then there are stat/2 bytes remaining
+	fs_lseek(fs_fd, stat/2);
+
+	read = fs_read(fs_fd, buf, stat);
+
+	if (fs_close(fs_fd)) {
+		fs_umount();
+		die("Cannot close file");
+	}
+
+	if (fs_umount())
+		die("cannot umount diskname");
+
+	printf("Read file '%s' (%zu/%zu bytes)\n", filename, read, stat);
+
+	printf("Content of the file:\n");
+
+	printf("%.*s", (int)stat, buf);
+
+	free(buf);
+}
+
 size_t get_argv(char *argv)
 {
 	long int ret = strtol(argv, NULL, 0);
@@ -277,6 +342,7 @@ static struct {
 	{ "rm",		thread_fs_rm },
 	{ "cat",	thread_fs_cat },
 	{ "stat",	thread_fs_stat },
+	{ "lseek",	thread_fs_lseek },
 };
 
 void usage(char *program)

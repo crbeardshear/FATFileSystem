@@ -11,28 +11,28 @@
 	1 + ((x - 1) / y)
 //phase 1-2 function prototypes
 int bytes_to_block(int y);
-int delete_file(int fir_block);
-char * resize_buffer(char * buffer, int old_size, int * new_size);
-int update_RD();
-int read_in_RD();
-int read_in_FAT();
-int update_FAT();
-int delete_root(const char * fname);
-int file_exist(const char * fname);
-int delete_file(int fir_block);
-struct Root_Dir * create_root(const char *file_n);
-int next_block();
-int free_FAT_blocks();
-int free_RD_blocks();
+static int delete_file(int fir_block);
+static char * resize_buffer(char * buffer, int old_size, int * new_size);
+static int update_RD();
+static int read_in_RD();
+static int read_in_FAT();
+static int update_FAT();
+static int delete_root(const char * fname);
+static int file_exist(const char * fname);
+static int delete_file(int fir_block);
+static struct Root_Dir * create_root(const char *file_n);
+static int next_block();
+static int free_FAT_blocks();
+static int free_RD_blocks();
 //phase 3 function prototypes
 static int fs_fd_init(int fd, const char *filename);
-int return_rd(char * fd_name);
-int next_block();
-int fd_exists(int fd);
-int file_exists(const char * fd_name);
-uint32_t file_extend(int fd, uint16_t blockcount);
+static int return_rd(char * fd_name);
+static int next_block();
+static int fd_exists(int fd);
+static int file_exists(const char * fd_name);
+static uint32_t file_extend(int fd, uint16_t blockcount);
 
-typedef struct __attribute__((__packed__)) sBlock {
+struct __attribute__((__packed__)) sBlock {
 	
 	char Sig[8];//Signature
 	uint16_t tNumBlocks;//Total Number of Blocks
@@ -41,12 +41,13 @@ typedef struct __attribute__((__packed__)) sBlock {
 	uint16_t nDataBlocks;//Totoal number of data blocks
 	uint8_t  nFAT_Blocks;//Total number of FAT blocks
 	char padding[4079];//Padding
-}t;
+};
 
 typedef struct __attribute__((__packed__)) FAT {
 	
 	uint16_t *f_table;//pointer to FAT
 }t2;
+
 typedef struct __attribute__((__packed__)) Root_Dir {
 	
 	char fname[FS_FILENAME_LEN];//Filename
@@ -54,6 +55,7 @@ typedef struct __attribute__((__packed__)) Root_Dir {
 	uint16_t  f_index;//index of first FAT block
 	char padding[10];
 }t3;
+
 typedef struct fs_filedes {
 
 	int fd_offset; //file descriptor offset
@@ -428,7 +430,6 @@ int fs_stat(int fd)
 	}	
 	//fd does not exist
 	return -1;
-	
 }
 
 int fs_lseek(int fd, size_t offset)
@@ -683,19 +684,22 @@ int fs_read(int fd, void *buf, size_t count)
 
 
 //phase 1-2 helper functions
-int read_in_RD() {
+static int read_in_RD()
+{
 	//read root directory block from root dir block index
 	int ret = block_read(SB->rdb_Index,RD);
 	return ret;
 }
 
-int update_RD() {
+static int update_RD()
+{
 	//write root directory block to root dir block index
 	int ret = block_write(SB->rdb_Index,RD);
 	return ret;
 }
 //this function reads the FAT table from the disk
-int read_in_FAT() {
+static int read_in_FAT()
+{
 	
 	int size=0, y=0;
 
@@ -724,9 +728,10 @@ int read_in_FAT() {
 	return 0;
 	
 }
+
 //this function writes the contents of the fat table to disk
-int update_FAT() {
-	
+static int update_FAT()
+{
 	int size=0, y=0;
 
 	//new_array conatains all contents of fat->f_table and is
@@ -752,7 +757,7 @@ int update_FAT() {
 //this fruntion returns an array that is atleast as large as
 //buffer, but is also a multiple of BLOCK_SIZE, new_size will
 //store the size of the array this function returns
-char * resize_buffer(char * buffer, int old_size, int * new_size)
+static char * resize_buffer(char * buffer, int old_size, int * new_size)
 {
 	char * new_buffer;
 
@@ -785,7 +790,7 @@ char * resize_buffer(char * buffer, int old_size, int * new_size)
 
 //find the RD entry named fname and rename it
 //'\0'
-int delete_root(const char * fname)
+static int delete_root(const char * fname)
 {
 	//iterate through the root directory
 	for (int i=0; i<FS_FILE_MAX_COUNT; i++) {
@@ -797,9 +802,10 @@ int delete_root(const char * fname)
 	}
 	return -1;
 }
+
 //take in a filename and determine if it exists in
 //the root directory
-int file_exist(const char * fname)
+static int file_exist(const char * fname)
 {
 	//iterate through the root directory
 	for (int i=0; i<FS_FILE_MAX_COUNT; i++) {
@@ -813,7 +819,7 @@ int file_exist(const char * fname)
 }
 
 //delete FAT entries of a file, starting at index fir_block
-int delete_file(int fir_block)
+static int delete_file(int fir_block)
 {
 	int temp =0; 
 	
@@ -839,7 +845,7 @@ int delete_file(int fir_block)
 }
 
 //create a root directory entry named file_n
-struct Root_Dir * create_root(const char *file_n)
+static struct Root_Dir * create_root(const char *file_n)
 {
 	//iterate through the root directory
 	for (int i=0; i<FS_FILE_MAX_COUNT; i++) {
@@ -856,7 +862,8 @@ struct Root_Dir * create_root(const char *file_n)
 }
 
 //iterate through fat table, return the next empty index
-int next_block() {
+static int next_block()
+{
 	
 	for (int i =1; i<SB->nDataBlocks; i++) {
 		if (fat->f_table[i]==0) {
@@ -867,8 +874,9 @@ int next_block() {
 	//FAT table is full
 	return -1;
 }
+
 //count the number of empty indices in fat table
-int free_FAT_blocks()
+static int free_FAT_blocks()
 {
 	int fb_count=0;
 
@@ -883,8 +891,9 @@ int free_FAT_blocks()
 	//return number of empty indices
 	return fb_count;
 }
+
 //count the number of free root drectory blocks
-int free_RD_blocks()
+static int free_RD_blocks()
 {
 	int rdb_count=0;
 
@@ -912,8 +921,9 @@ static int fs_fd_init(int fd, const char *filename)
 	return 0;
 	
 }
+
 //return index of file in the root directory table
-int return_rd(char * fd_name)
+static int return_rd(char * fd_name)
 {
 	for (int i=0; i<FS_FILE_MAX_COUNT; i++) {
 		//compare input string to filenames in root directory
@@ -924,8 +934,9 @@ int return_rd(char * fd_name)
 
 	return -1;
 }
+
 //check if file descriptor exists
-int fd_exists(int fd)
+static int fd_exists(int fd)
 {
 	if (filedes[fd].fd_filename[0]=='\0') {
 		return -1;
@@ -935,7 +946,7 @@ int fd_exists(int fd)
 	
 }
 //search RD for fd_name to decide if it exists
-int file_exists(const char * fd_name)
+static int file_exists(const char * fd_name)
 {
 	for (int i=0; i<FS_FILE_MAX_COUNT; i++) {
 		//compare input string to filenames in root directory
@@ -948,7 +959,7 @@ int file_exists(const char * fd_name)
 }
 
 //returns the number of blocks added, which is as many as possible.
-uint32_t file_extend(int fd, uint16_t blockcount)
+static uint32_t file_extend(int fd, uint16_t blockcount)
 {
 	//next available data block in FAT
 	int alloc_block;

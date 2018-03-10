@@ -5,40 +5,40 @@
 # the parameters are simply the test's name
 cmp_output()
 {
-    echo "\nTest $testnum: $1 $2 $3 $4"
-    echo "Comparison for test $testnum:"
+	echo "\nTest $testnum: $1 $2 $3 $4"
+	echo "Comparison for test $testnum:"
 
-    # put output files into variables
-    REF_STDOUT=$(cat ref.stdout)
-    REF_STDERR=$(cat ref.stderr)
+	# put output files into variables
+	REF_STDOUT=$(cat ref.stdout)
+	REF_STDERR=$(cat ref.stderr)
 
-    LIB_STDOUT=$(cat lib.stdout)
-    LIB_STDERR=$(cat lib.stderr)
+	LIB_STDOUT=$(cat lib.stdout)
+	LIB_STDERR=$(cat lib.stderr)
 
-    # compare stdout
-    if [ "$REF_STDOUT" != "$LIB_STDOUT" ]; then
-        echo "Stdout outputs don't match..."
-        diff -u ref.stdout lib.stdout
-	echo "REF: $REF_STDOUT"
-	echo "LIB: $LIB_STDOUT"
-    else
-        echo "Stdout outputs match!"
-    fi
+	# compare stdout
+	if [ "$REF_STDOUT" != "$LIB_STDOUT" ]; then
+		echo "Stdout outputs don't match..."
+		diff -u ref.stdout lib.stdout
+		echo "REF: $REF_STDOUT"
+		echo "LIB: $LIB_STDOUT"
+	else
+		echo "Stdout outputs match!"
+	fi
 
-    # compare stderr
-    if [ "$REF_STDERR" != "$LIB_STDERR" ]; then
-        echo "Stderr outputs don't match..."
-        diff -u ref.stderr lib.stderr
-	echo "REF: $REF_STDERR"
-	echo "LIB: $LIB_STDERR"
-    else
-        echo "Stderr outputs match!"
-    fi
+	# compare stderr
+	if [ "$REF_STDERR" != "$LIB_STDERR" ]; then
+		echo "Stderr outputs don't match..."
+		diff -u ref.stderr lib.stderr
+		echo "REF: $REF_STDERR"
+		echo "LIB: $LIB_STDERR"
+	else
+		echo "Stderr outputs match!"
+	fi
 
-    # cleanup for next test
-    testnum=$(($testnum+1))
-    rm ref.stdout ref.stderr
-    rm lib.stdout lib.stderr
+	# cleanup for next test
+	testnum=$(($testnum+1))
+	rm ref.stdout ref.stderr
+	rm lib.stdout lib.stderr
 }
 
 # Start of script:
@@ -69,8 +69,8 @@ cmp_output ls empty
 num=0
 while [ $num -lt 1000 ]
 do
-    echo "test" >> test1
-    num=$(($num+1))
+	echo "test" >> test1
+	num=$(($num+1))
 done
 
 ./fs_ref.x add refdisk.fs test1 >ref.stdout 2>ref.stderr
@@ -78,6 +78,18 @@ done
 cmp_output write test1 5,000 bytes
 
 rm test1
+
+# Add a small file
+echo "asdf" > small
+./fs_ref.x add refdisk.fs small >ref.stdout 2>ref.stderr
+./test_fs.x add libdisk.fs small >lib.stdout 2>lib.stderr
+cmp_output write test1 5 bytes
+
+# Test lseek function (lseek in test_fs reads half of the file, rounded up)
+echo "Read file 'small' (3/5 bytes)\nContent of the file:\ndf" > ref.stdout
+echo "" > ref.stderr
+./test_fs.x lseek libdisk.fs small >lib.stdout 2>lib.stderr
+cmp_output lseek small file
 
 # add file which doesn't exist
 ./fs_ref.x add refdisk.fs test10 >ref.stdout 2>ref.stderr
@@ -88,8 +100,8 @@ cmp_output write nonexistent test10
 num=0
 while [ $num -lt 10000 ]
 do
-    echo "test" >> test2
-    num=$(($num+1))
+	echo "test" >> test2
+	num=$(($num+1))
 done
 
 ./fs_ref.x add refdisk.fs test2 >ref.stdout 2>ref.stderr
@@ -127,8 +139,8 @@ cmp_output info after adds
 num=0
 while [ $num -lt 10000 ]
 do
-    echo "test number 3 asdf asdf" >> test3
-    num=$(($num+1))
+	echo "test number 3 asdf asdf" >> test3
+	num=$(($num+1))
 done
 
 ./fs_ref.x add refdisk.fs test3 >ref.stdout 2>ref.stderr
@@ -194,8 +206,8 @@ cmp_output rm test4
 num=0
 while [ $num -lt 6400 ]
 do
-    echo "test num four should be 32 bytes" >> test4
-    num=$(($num+1))
+	echo "test num four should be 32 bytes" >> test4
+	num=$(($num+1))
 done
 
 ./fs_ref.x add refdisk.fs test4 >ref.stdout 2>ref.stderr
@@ -209,6 +221,7 @@ cat test4 > test5
 cmp_output write test5 fs full
 
 rm test4
+rm test5
 
 # ls after write failure
 ./fs_ref.x ls refdisk.fs >ref.stdout 2>ref.stderr
@@ -259,12 +272,15 @@ echo "asdf" > thisisoneless1
 ./fs_ref.x add refdisk.fs thisisoneless1 >ref.stdout 2>ref.stderr
 ./test_fs.x add libdisk.fs thisisoneless1 >lib.stdout 2>lib.stderr
 cmp_output write filename 15
+
+
+
 rm thisisoneless1
 
 # clean
 rm refdisk.fs libdisk.fs
 
-# one entry in fat table
+# Disk with one entry in fat table
 ./fs_make.x refdisk.fs 1
 ./fs_make.x libdisk.fs 1
 
@@ -272,7 +288,6 @@ rm refdisk.fs libdisk.fs
 echo "test" > test11
 ./fs_ref.x add refdisk.fs test11 >ref.stdout 2>ref.stderr
 ./test_fs.x add libdisk.fs test11 >lib.stdout 2>lib.stderr
-cat ref.stdout
 cmp_output add, fat 1 block
 
 rm test11
@@ -296,6 +311,16 @@ cmp_output stat test11
 ./fs_ref.x info refdisk.fs >ref.stdout 2>ref.stderr
 ./test_fs.x info libdisk.fs >lib.stdout 2>lib.stderr
 cmp_output info
+
+# rm the empty file
+./fs_ref.x rm refdisk.fs test11 >ref.stdout 2>ref.stderr
+./test_fs.x rm libdisk.fs test11 >lib.stdout 2>lib.stderr
+cmp_output rm test11 empty file
+
+# ls after rm
+./fs_ref.x ls refdisk.fs >ref.stdout 2>ref.stderr
+./test_fs.x ls libdisk.fs >lib.stdout 2>lib.stderr
+cmp_output ls after rm
 
 # clean
 rm refdisk.fs libdisk.fs
