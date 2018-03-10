@@ -1,8 +1,8 @@
 # Project 4 Report
 ## Phase 1
 
-* The global structures  -__SB__,__RD__, __fat__, `fat->f_table`,__
-filedes__- receive their dynamically allocated memory here because mount
+* The global structures  -__SB__,__RD__, __fat__, `fat->f_table`,
+`filedes`- receive their dynamically allocated memory here because mount
 is the first function in fs.c that should be called. The mount function must
 prepare the disk to be used as a file system to be used with the
 `ECS150-FS` file system. In order to do this, it reads in the information
